@@ -25,7 +25,8 @@ h_imp = h_loc + h_coup + h_bath
 fundamental_operators = [ c('dn',0), c('up',0) ] # FIXME To be extracted
 
 # ==== Green function structure ====
-gf_struct = [ ['up',[0]], ['dn',[0]] ]
+# gf_struct = [ ['up',[0]], ['dn',[0]] ] 
+gf_struct = [ ['dn',[0]], ['up',[0]] ] # FIXME picking alphabetic order
 
 # ==== Hybridization Function ====
 n_iw = 20
