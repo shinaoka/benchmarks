@@ -281,7 +281,7 @@ for iw, iW in chi3pp_iw[('up','dn')].mesh:
 
 # -------- Save in archive ---------
 res["chi3pp_iw"] = chi3pp_iw
-res["chi3pp_conn_iw"] = chi3pp_conn_iw
+#res["chi3pp_conn_iw"] = chi3pp_conn_iw
 
 
 # ================ chi3ph_iw ==================
@@ -327,7 +327,7 @@ for iw, iW in chi3ph_iw[('up','dn')].mesh:
 
 # -------- Save in archive ---------
 res["chi3ph_iw"] = chi3ph_iw
-res["chi3ph_conn_iw"] = chi3ph_conn_iw
+#res["chi3ph_conn_iw"] = chi3ph_conn_iw
 
 
 # ================ chi2pp_iw ==================

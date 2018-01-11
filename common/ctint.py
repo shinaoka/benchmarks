@@ -39,7 +39,7 @@ solve_params = {
         'measure_M3ph_tau' : True,
         'n_iw_M3' : n_iw,
         'n_iW_M3' : n_iw,
-        'n_tau_M3' : 4000, # Careful -> Discretization error
+        'n_tau_M3' : 1000,
         'n_s' : 2, 
         'post_process' : True
         }
