@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-from __future__ import print_function
-
+#!/usr/bin/env python3
 from dcore.impurity_solvers.alps_cthyb import ALPSCTHYBSolver as Solver
 from dcore.tools import make_block_gf, raise_if_mpi_imported
 
@@ -10,6 +8,15 @@ from itertools import product
 sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
 from model import *
+
+# The model module might my MPI modules. They must be removed before running the solver
+#import re
+#p1 = re.compile(r'mpi4py')
+#p2 = re.compile(r'triqs.utility.mpi')
+#for k in sys.modules.keys():
+    #if p1.match(k) or p2.match(k):
+        #sys.modules.pop(k)
+
 from dcore_util import *
 
 raise_if_mpi_imported()
