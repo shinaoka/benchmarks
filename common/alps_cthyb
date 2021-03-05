@@ -1,30 +1,23 @@
 #!/usr/bin/env python3
-from dcore.impurity_solvers.alps_cthyb import ALPSCTHYBSolver as Solver
-from dcore.tools import make_block_gf, raise_if_mpi_imported
-
 import sys, os, time
 import numpy
-from itertools import product
+
+from h5 import HDFArchive
+from dcore.impurity_solvers.alps_cthyb import ALPSCTHYBSolver as Solver
+from dcore.tools import raise_if_mpi_imported
+
 sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
 from model import *
-
-# The model module might my MPI modules. They must be removed before running the solver
-#import re
-#p1 = re.compile(r'mpi4py')
-#p2 = re.compile(r'triqs.utility.mpi')
-#for k in sys.modules.keys():
-    #if p1.match(k) or p2.match(k):
-        #sys.modules.pop(k)
-
 from dcore_util import *
 
 raise_if_mpi_imported()
 
-import triqs
-from h5 import HDFArchive
-
-raise_if_mpi_imported()
+try:
+    os.mkdir(os.getcwd() + '/../alpscthyb_workdir')
+except:
+    pass
+os.chdir(os.getcwd() + '/../alpscthyb_workdir')
 
 norb, gf_struct_dcore, u_mat, G0_iw_dcore = convert_to_dcore_format(gf_struct, h_int, G0_iw, beta, n_iw)
 
@@ -40,7 +33,7 @@ S = Solver(constr_params["beta"], constr_params["gf_struct"], u_mat, constr_para
 
 # --------- Initialize G0_iw ----------
 S.set_G0_iw(G0_iw_dcore)
-convert_to_triqs_bname(G0_iw_dcore, gf_struct, beta, n_iw)
+#convert_to_triqs_bname(G0_iw_dcore, gf_struct, beta, n_iw)
 del G0_iw_dcore
 
 # --------- Get command to launch MPI program (i.e, "mpirun -np 8") ----------
@@ -69,6 +62,46 @@ with HDFArchive("../results/alps_cthyb.h5",'w') as results:
     info_grp = results["Solver_Info"]
     info_grp["solver_name"] = "alps_cthyb"
     info_grp["constr_params"] = constr_params
-    #info_grp["triqs_git_hash"] = version.triqs_hash
     info_grp["script"] = inspect.getsource(__main__)
     info_grp["run_time"] = end - start
+
+if not 'COMPUTE_2PARTICLE' in os.environ:
+    print('Exiting...')
+    sys.exit()
+if int(os.environ['COMPUTE_2PARTICLE']) == 0:
+    print('Exiting...')
+    sys.exit()
+
+# --------- Solve again! ----------
+start = time.time()
+from g2 import gen_box_smpl_freqs_ph, gen_sparse_smpl_freqs_ph
+nwb, nwf = 5, 5
+
+sparse_smpl_freqs_ph = gen_sparse_smpl_freqs_ph()
+box_smpl_freqs_ph = gen_box_smpl_freqs_ph(nwb, nwf)
+smpl_freqs_ph = numpy.vstack((box_smpl_freqs_ph, sparse_smpl_freqs_ph))
+
+# Change the ordering of fermionic and bosonic frequencies
+# from (BFF) to (FFB)
+smpl_freqs_ph_alps = numpy.zeros_like(smpl_freqs_ph)
+smpl_freqs_ph_alps[:,0] = smpl_freqs_ph[:,1]
+smpl_freqs_ph_alps[:,1] = smpl_freqs_ph[:,2]
+smpl_freqs_ph_alps[:,2] = smpl_freqs_ph[:,0]
+
+G2loc = S.calc_G2loc_ph_sparse(rot, mpirun_command, smpl_freqs_ph_alps, solve_params)
+end = time.time()
+
+nfreqs_box = box_smpl_freqs_ph.shape[0]
+g2triqs = make_triqs_g2(beta, nwb, nwf, G2loc[..., 0:nfreqs_box], gf_struct)
+
+with HDFArchive('../results/alps_cthyb.h5', 'a') as results:
+    results['G2_iw_inu_inup_ph_AABB'] = g2triqs
+
+    results.create_group("G2loc_box")
+    results.create_group("G2loc_sparse")
+    nfreqs_sparse = sparse_smpl_freqs_ph.shape[0]
+    results['G2loc_box']['smpl_freqs_ph'] = smpl_freqs_ph[0:nfreqs_box]
+    results['G2loc_box']['smpl_freqs_ph'] = smpl_freqs_ph[0:nfreqs_box]
+    results['G2loc_box']['data'] = G2loc[..., 0:nfreqs_box]
+    results['G2loc_sparse']['smpl_freqs_ph'] = smpl_freqs_ph[nfreqs_box:nfreqs_box+nfreqs_sparse]
+    results['G2loc_sparse']['data'] = G2loc[..., nfreqs_box:nfreqs_box+nfreqs_sparse]
